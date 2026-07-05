@@ -6,6 +6,15 @@ venv/
 __pycache__/
 *.pyc
 
+# Variables privadas / por máquina
+.env
+
+# Salida del smoke test
+scripts/smoke_test_output.wav
+
+# Modelos descargados (voz de Piper — ver README)
+models/
+
 # Archivos del editor / sistema
 .vscode/
 .idea/

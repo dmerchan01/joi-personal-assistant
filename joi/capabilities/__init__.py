@@ -29,10 +29,24 @@ class Capability:
 
 from joi.capabilities.apps import CAPABILITY as _apps
 from joi.capabilities.weather import CAPABILITY as _weather
+from joi.capabilities.nasa import CAPABILITY as _nasa
+from joi.capabilities.technews import CAPABILITY as _technews
+from joi.capabilities.papers import CAPABILITY as _papers
+from joi.capabilities.music import CAPABILITY as _music
+from joi.capabilities.reminders import CAPABILITY as _reminders
+from joi.capabilities.notes import CAPABILITY as _notes
+from joi.capabilities.anime import CAPABILITY as _anime
 
 REGISTRY: list[Capability] = [
     _apps,
     _weather,
+    _nasa,
+    _technews,
+    _papers,
+    _music,
+    _reminders,
+    _notes,
+    _anime,
     # <- register new capabilities here (one line per capability)
 ]
 

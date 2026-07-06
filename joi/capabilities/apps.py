@@ -83,7 +83,8 @@ def open_app(app_name: str) -> str:
     name = _find_app(app_name.lower().strip())
     if name is None:
         return (f"No installed app found matching '{app_name}'. "
-                "Use list_installed_apps to see what is available.")
+                "Use list_installed_apps to see what is available — or, if "
+                "the user wants to watch a show or anime, use anime_watch.")
     cmd = _APPS[name]
     subprocess.Popen(cmd.split(), start_new_session=True)
     if "steam://rungameid" in cmd:

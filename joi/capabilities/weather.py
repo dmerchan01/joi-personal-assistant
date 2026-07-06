@@ -22,12 +22,18 @@ _WMO = {
 def get_weather(city: str) -> str:
     """Get the current weather for a city (temperature and conditions)."""
     try:
+        # Open-Meteo's geocoder wants the bare city name: "Livermore,
+        # California" returns nothing while "Livermore" works (verified).
+        city = city.split(",")[0].strip()
         geo = httpx.get(_GEO_URL, params={"name": city, "count": 1}, timeout=10).json()
         results = geo.get("results")
         if not results:
             return f"Could not find a city named '{city}'."
         lat, lon = results[0]["latitude"], results[0]["longitude"]
         place = results[0]["name"]
+        admin1 = results[0].get("admin1")
+        if admin1 and admin1 != place:
+            place += f", {admin1}"
 
         wx = httpx.get(_WEATHER_URL, params={
             "latitude": lat, "longitude": lon,

@@ -133,6 +133,92 @@ def main() -> int:
     else:
         section("normal mode on GPU", "GPU" in line)
 
+    print("\n== 7. notes path confinement ==")
+    import tempfile
+    import joi.capabilities.notes as notes
+    notes._ROOT = tempfile.mkdtemp(prefix="joi-notes-test-")
+    escapes = ["../escape", "/etc", "a/b", "..", ".hidden", "x/../../y", "~root"]
+    rejected = [e for e in escapes if notes._safe_folder(e) is None]
+    section("escape attempts rejected", len(rejected) == len(escapes),
+            f"{len(rejected)}/{len(escapes)} rejected")
+    ok_write = "Noted" in notes.add_note("ToDo", "confinement test note")
+    inside = os.path.isfile(os.path.join(notes._ROOT, "ToDo",
+                                         time.strftime("%Y-%m-%d") + ".md"))
+    section("valid note lands inside root", ok_write and inside)
+
+    print("\n== 8. routing test (EN/ES, ~27 tools on one agent) ==")
+    from llama_index.core.workflow import Context
+    from joi.capabilities import reminders
+    import joi.capabilities.anime as anime
+    anime._run_ani_cli = lambda *a, **k: ""  # route, but never launch mpv
+
+    # (query, expected tool name or None for plain chat)
+    ROUTES = [
+        ("What's the astronomy picture of the day?", "nasa_picture_of_the_day"),
+        ("¿Hay asteroides cerca de la Tierra esta semana?", "asteroids_near_earth"),
+        ("Show me a Mars rover photo", "mars_rover_photo"),
+        ("Any wildfires or storms on Earth right now?", "earth_natural_events"),
+        ("What's the top tech news?", "tech_news_top"),
+        ("Open the second news story", "tech_news_open"),
+        ("Latest AI papers on arXiv", "ai_papers_arxiv"),
+        ("¿Cuáles son los papers de moda en Hugging Face?", "ai_papers_trending"),
+        ("Pause the music", "music_pause"),
+        ("¿Qué canción está sonando?", "music_now_playing"),
+        ("Play Bohemian Rhapsody by Queen", "music_play_song"),
+        ("Remind me in 10 minutes to stretch", "set_reminder"),
+        ("Cancela todos los recordatorios", "cancel_reminder"),
+        ("Add a note to my ToDo folder that I must finish the homework", "add_note"),
+        ("Ponme una nota en Projects que quiero un agente de visión", "add_note"),
+        ("What's the weather in Madrid?", "get_weather"),
+        ("Abre Firefox", "open_app"),
+        ("I want to keep watching Fire Force", "anime_watch"),
+        ("Pon el siguiente episodio de Dr. Stone", "anime_watch"),
+        ("Play episode 3 of Frieren", "anime_watch"),
+        ("What anime am I watching?", "anime_progress"),
+        ("Tell me a fun fact about space", None),
+        ("¿Cómo estás hoy?", None),
+        ("What's two plus two?", None),
+    ]
+
+    real_popen = subprocess.Popen
+    subprocess.Popen = lambda *a, **kw: None  # no browsers/apps during routing
+
+    async def route_all() -> tuple[int, list[str], list[float]]:
+        # fresh agent: its Ollama async client must bind to THIS event loop
+        r_agent = JoiAgent(cfg)
+        hits, misses, chat_times = 0, [], []
+        for query, expected in ROUTES:
+            r_agent.ctx = Context(r_agent.agent)  # fresh conversation per query
+            called: list[str] = []
+            t0 = time.perf_counter()
+            async for ev in r_agent.stream_chat(query):
+                if ev.tool_note:
+                    called.append(ev.tool_note.split("(")[0])
+            dt = time.perf_counter() - t0
+            ok = (expected in called) if expected else not called
+            hits += ok
+            if expected is None:
+                chat_times.append(dt)
+            mark = "ok " if ok else "MISS"
+            print(f"  {mark} {dt:4.1f}s  {query!r} -> {called or 'no tool'}"
+                  f"{'' if ok else f' (expected {expected})'}")
+            if not ok:
+                misses.append(query)
+        return hits, misses, chat_times
+
+    try:
+        hits, misses, chat_times = asyncio.run(route_all())
+    finally:
+        subprocess.Popen = real_popen
+        reminders.cancel_reminder(0)  # clean up any timer the test set
+
+    score = hits / len(ROUTES)
+    avg_chat = sum(chat_times) / len(chat_times) if chat_times else 0.0
+    print(f"  routing accuracy: {hits}/{len(ROUTES)} = {score:.0%}"
+          f" | avg no-tool turn: {avg_chat:.2f}s")
+    section("routing accuracy >= 80%", score >= 0.8, f"{score:.0%}")
+    section("no-tool latency ~1s", avg_chat < 2.0, f"{avg_chat:.2f}s warm")
+
     print(f"\n{'ALL PASS' if not FAILURES else 'FAILED: ' + ', '.join(FAILURES)}")
     return 0 if not FAILURES else 1
 

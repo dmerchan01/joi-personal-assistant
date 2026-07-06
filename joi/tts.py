@@ -16,6 +16,10 @@ import numpy as np
 import sounddevice as sd
 from piper import PiperVoice
 
+# Serializes ALL audio output: a reminder firing from a background thread
+# waits here until the in-progress reply finishes playing (and vice versa).
+PLAYBACK_LOCK = threading.RLock()
+
 
 class TTS:
     """Owns the Piper voice; synthesizes and plays text synchronously."""
@@ -27,13 +31,14 @@ class TTS:
         """Synthesize and play a full string, blocking until playback ends."""
         if not text:
             return
-        stream = None
-        try:
-            stream = self._play_into(text, stream)
-        finally:
-            if stream is not None:
-                stream.stop()
-                stream.close()
+        with PLAYBACK_LOCK:
+            stream = None
+            try:
+                stream = self._play_into(text, stream)
+            finally:
+                if stream is not None:
+                    stream.stop()
+                    stream.close()
 
     def _play_into(self, text: str, stream: sd.OutputStream | None,
                    on_first_audio=None) -> sd.OutputStream | None:
@@ -97,13 +102,14 @@ class StreamingSpeaker:
     def _run(self) -> None:
         stream = None
         try:
-            while True:
-                item = self._queue.get()
-                if item is self._DONE:
-                    break
-                stream = self._tts._play_into(
-                    item, stream, on_first_audio=self._mark_first_audio,
-                )
+            with PLAYBACK_LOCK:  # held for the whole reply
+                while True:
+                    item = self._queue.get()
+                    if item is self._DONE:
+                        break
+                    stream = self._tts._play_into(
+                        item, stream, on_first_audio=self._mark_first_audio,
+                    )
         except BaseException as e:  # re-raised in finish()
             self._error = e
         finally:

@@ -74,6 +74,11 @@ class VoiceAssistant:
             caps = ", ".join(c.name for c in self.agent.capabilities)
             print(f"Capabilities: {caps}")
 
+        # reminders fire from a timer thread; TTS.speak serializes on
+        # PLAYBACK_LOCK so they never talk over an in-progress reply
+        from joi.capabilities import reminders
+        reminders.set_speaker(self.tts.speak)
+
         print(f"\nJoi ready  |  mode: {cfg.mode}  |  backend: {cfg.backend}"
               f"  |  model: {cfg.model}")
         print("Press Enter to start talking, then Enter again to stop. "

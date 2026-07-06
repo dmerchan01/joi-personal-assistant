@@ -70,6 +70,13 @@ joi/
     __init__.py   Capability dataclass + REGISTRY
     apps.py       open_app / list_installed_apps (.desktop scan)
     weather.py    get_weather (Open-Meteo)
+    nasa.py       picture of the day, asteroids, Mars photos, Earth events
+    technews.py   Hacker News top stories + open in browser
+    papers.py     arXiv latest + Hugging Face trending papers
+    music.py      playerctl control (pause/resume/next/what's playing)
+    reminders.py  timed spoken reminders + desktop notification
+    notes.py      voice notes to ~/Notes/<folder>/, path-confined
+    anime.py      watch anime via ani-cli (continue/next/specific episode)
   config.py       every tunable, incl. normal/gaming profiles + persona
   stt.py          Transcriber (faster-whisper; imports cuda_libs first)
   cuda_libs.py    ctypes preload of pip nvidia wheels (keep before whisper)
@@ -82,6 +89,38 @@ scripts/smoke_test.py
 Single-agent by design (measured lower latency than multi-agent handoffs).
 When Phase 3+ graduates to LlamaIndex `AgentWorkflow`, the only change point
 is `JoiAgent.__init__` — see the comment there.
+
+## Capability setup notes
+
+- **NASA**: get a free key at https://api.nasa.gov and put
+  `NASA_API_KEY=...` in `.env`. Without it Joi falls back to `DEMO_KEY`
+  (~30 requests/hour vs ~1,000 with a key).
+- **Music**: uses `playerctl` (already installed; otherwise
+  `sudo pacman -S playerctl`). Controls Spotify first, then any MPRIS
+  player. Try: "pause the music", "what's playing".
+- **Spotify search (Stage B, not active)**: playing a *specific* song by
+  name needs the Spotify Web API. To enable it later: create an app at
+  https://developer.spotify.com/dashboard, add a redirect URI (e.g.
+  `http://127.0.0.1:8888/callback`), put `SPOTIFY_CLIENT_ID` and
+  `SPOTIFY_CLIENT_SECRET` in `.env`. Playback control endpoints also
+  require Spotify Premium (verify against Spotify's current docs when
+  implementing). Until then `music_play_song` answers honestly that it
+  isn't configured.
+- **Reminders**: v1 is in-memory — pending reminders are lost if Joi
+  restarts (persistence comes with Phase 4). When one fires it speaks
+  (waiting for any in-progress reply to finish) and sends a desktop
+  notification via mako.
+- **Notes**: saved under `~/Notes/<Folder>/<YYYY-MM-DD>.md`, one
+  timestamped line per note. Change the root with `JOI_NOTES_ROOT` in
+  `.env`. Folder names are strictly validated — a transcription error can
+  never write outside the Notes root (covered by the smoke test).
+- **Anime**: needs `ani-cli` (installed). "I want to watch Fire Force" /
+  "quiero ver Fire Force" continues from where you left off (ani-cli's own
+  history); "next episode" plays the following one; "episode 3 of X" plays
+  that one. English names work even though the source uses romaji titles
+  ("Fire Force" → "Enen no Shouboutai") — resolved by matching IDs, not
+  names. If a source has no valid video, Joi retries the closest variants
+  and tells you honestly if none work.
 
 ## How to add a new capability
 

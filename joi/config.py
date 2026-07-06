@@ -62,6 +62,10 @@ class Config:
     # ---- Audio ----
     sample_rate: int = 16000
 
+    # ---- Notes capability ----
+    notes_root: str = os.environ.get(
+        "JOI_NOTES_ROOT", os.path.expanduser("~/Notes"))
+
     # ---- Persona (placeholder; real persona system is Phase 6) ----
     system_prompt: str = (
         "You are Joi, a concise local voice assistant. "

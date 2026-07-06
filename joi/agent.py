@@ -68,7 +68,16 @@ class JoiAgent:
                 "ALWAYS call the tool for an action, even if a similar "
                 "request failed earlier — never assume the result from "
                 "memory. App name matching is fuzzy: pass the name exactly "
-                "as the user said it."
+                "as the user said it.\n"
+                "Questions about live state (what song is playing right now, "
+                "today's weather, current news, pending reminders) can only "
+                "be answered by calling the matching tool. But general "
+                "knowledge, trivia, math and opinions need NO tool — answer "
+                "those directly.\n"
+                "When repeating tool results, keep names, titles and numbers "
+                "exactly as the tool gave them.\n"
+                "If a tool result suggests trying a different tool, call that "
+                "tool right away in the same turn instead of asking the user."
             ),
         )
         # Reusing one Context across run() calls is what gives multi-turn memory.
